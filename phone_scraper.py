@@ -11,11 +11,27 @@ def find_phone_numbers(url):
         soup = BeautifulSoup(response.text, 'html.parser')
         text = soup.get_text()
 
-        # первый вариант регулярки, 8-___-___-__-__
-        phone_regex = re.compile(r'8[\s]*\(?(\d{3})\)?[\s-]*(\d{3})[\s-]*(\d{2})[\s-]*(\d{2})')
-        phones = phone_regex.findall(text)
+        phone_regex = re.compile(
+            r'(\+7|8|7)?[\s\-\.]*\(?\s*(\d{3})\s*\)?[\s\-\.]*(\d{1,3})[\s\-\.]*(\d{2})[\s\-\.]*(\d{2})'
+        )
+        raw_phones = phone_regex.findall(text)
 
-        formatted_phones = set(['8{}{}{}{}'.format(*phone) for phone in phones])
+        formatted_phones = set()  # отсеет повторы
+        for raw_phone in raw_phones:
+            digits = re.sub(r'\D', '', ''.join(raw_phone))
+
+            if len(digits) not in (7, 10, 11):
+                continue
+
+            # Приведение к формату 8KKKNNNNNNN
+            if len(digits) == 10:
+                digits = '8' + digits
+            elif len(digits) == 11 and digits[0] in ['7', '8']:
+                digits = '8' + digits[1:]
+            elif len(digits) == 7:
+                digits = '8' + digits[1:]
+
+            formatted_phones.add(digits)
 
         return list(formatted_phones)
     except requests.RequestException as e:
@@ -26,7 +42,8 @@ def find_phone_numbers(url):
 if __name__ == "__main__":
     urls = [
         "https://hands.ru/company/about",
-        "https://repetitors.info"
+        "https://repetitors.info",
+        "https://targetsms.ru/blog/1074-format-telefonnykh-nomerov"
     ]
 
     phone_numbers = {}
@@ -37,4 +54,3 @@ if __name__ == "__main__":
             print(f"Номера телефонов на {url}: {phones}")
         else:
             print(f"Номера телефонов на {url} не найдены.")
-
